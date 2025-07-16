@@ -175,16 +175,7 @@ if 'db_file' not in st.session_state:
 conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
 cursor = conn.cursor()
 
-# Logo
-try:
-    logo_base64 = get_base64_image("logo.png")
-    st.markdown(f"""
-        <div class="logo-title-container">
-            <img src='data:image/png;base64,{logo_base64}' width='120'>
-        </div>
-    """, unsafe_allow_html=True)
-except FileNotFoundError:
-    st.markdown('<div class="logo-title-container"><h3>SQLtes</h3></div>', unsafe_allow_html=True)
+
 
 # Single, centered, large title
 st.markdown("<h1>SQLtes</h1>", unsafe_allow_html=True)
