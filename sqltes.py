@@ -176,7 +176,7 @@ conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
 cursor = conn.cursor()
 
 
-
+st.markdown("<h6></h6>",unsafe_allow_html=True)
 # Single, centered, large title
 st.markdown("<h1>SQLtes</h1>", unsafe_allow_html=True)
 st.markdown("<h2>Execute SQL commands and watch your database evolve in real time!</h2>", unsafe_allow_html=True)
