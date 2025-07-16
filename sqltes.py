@@ -3,8 +3,10 @@ import sqlite3
 import pandas as pd
 from streamlit_ace import st_ace  # For SQL syntax highlighting
 import sqlparse  # For formatting SQL queries
-import base64  # For embedding logo
-import os  # For checking file existence
+
+# Initialize session state for query history
+if 'query_history' not in st.session_state:
+    st.session_state.query_history = []
 
 # Function to get database schema
 def get_schema(conn):
@@ -44,11 +46,6 @@ def display_schema(conn):
     else:
         st.markdown("No tables in the database.")
 
-# Function to encode image to base64 for embedding
-def get_base64_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
-
 # Streamlit app layout
 st.set_page_config(layout="wide", page_title="SQLtes", page_icon=":books:")
 
@@ -65,12 +62,6 @@ st.markdown("""
     .block-container {
         padding-top: 0.5rem !important;
         margin-top: 0 !important;
-    }
-    /* Logo and title container */
-    .logo-title-container {
-        text-align: center;
-        margin: 0;
-        padding: 10px 0;
     }
     /* Title styling (h1) */
     h1 {
@@ -130,11 +121,6 @@ st.markdown("""
         border-radius: 6px !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
-    /* Sidebar styling */
-    .css-1d391kg {
-        background-color: rgba(0, 0, 0, 0.2);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-    }
     /* Remove unnecessary margins */
     .stMarkdown, .stText {
         margin-bottom: 0.5rem;
@@ -143,31 +129,30 @@ st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
-# Sidebar for database name input
-with st.sidebar:
-    st.header("Database Selection")
-    db_name = st.text_input("Enter Database Name", value="my_database")
-    if st.button("Load/Create Database"):
-        if db_name.strip():
-            # Sanitize database name to prevent invalid characters
-            db_name = ''.join(c for c in db_name if c.isalnum() or c in ['_', '-'])
-            st.session_state.db_file = f"{db_name}.sqlite"
-            # Reconnect to the new database
-            conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
-            cursor = conn.cursor()
-            # Create sample table if it doesn't exist
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    age INTEGER,
-                    city TEXT
-                )
-            ''')
-            conn.commit()
-            st.success(f"Connected to database: {db_name}.sqlite")
-        else:
-            st.error("Please enter a valid database name.")
+# Database name input on main page
+st.header("Database Selection")
+db_name = st.text_input("Enter Database Name", value="my_database")
+if st.button("Load/Create Database"):
+    if db_name.strip():
+        # Sanitize database name to prevent invalid characters
+        db_name = ''.join(c for c in db_name if c.isalnum() or c in ['_', '-'])
+        st.session_state.db_file = f"{db_name}.sqlite"
+        # Reconnect to the new database
+        conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
+        cursor = conn.cursor()
+        # Create sample table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                age INTEGER,
+                city TEXT
+            )
+        ''')
+        conn.commit()
+        st.success(f"Connected to database: {db_name}.sqlite")
+    else:
+        st.error("Please enter a valid database name.")
 
 # Initialize database connection (use default if not set)
 if 'db_file' not in st.session_state:
@@ -175,8 +160,6 @@ if 'db_file' not in st.session_state:
 conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
 cursor = conn.cursor()
 
-
-st.markdown("<h6></h6>",unsafe_allow_html=True)
 # Single, centered, large title
 st.markdown("<h1>SQLtes</h1>", unsafe_allow_html=True)
 st.markdown("<h2>Execute SQL commands and watch your database evolve in real time!</h2>", unsafe_allow_html=True)
