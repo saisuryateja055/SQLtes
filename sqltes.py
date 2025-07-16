@@ -129,30 +129,30 @@ st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
-# Database name input on main page
-st.header("Database Selection")
-db_name = st.text_input("Enter Database Name", value="my_database")
-if st.button("Load/Create Database"):
-    if db_name.strip():
-        # Sanitize database name to prevent invalid characters
-        db_name = ''.join(c for c in db_name if c.isalnum() or c in ['_', '-'])
-        st.session_state.db_file = f"{db_name}.sqlite"
-        # Reconnect to the new database
-        conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
-        cursor = conn.cursor()
-        # Create sample table if it doesn't exist
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                age INTEGER,
-                city TEXT
-            )
-        ''')
-        conn.commit()
-        st.success(f"Connected to database: {db_name}.sqlite")
-    else:
-        st.error("Please enter a valid database name.")
+with st.sidebar:# Database name input on main page
+    st.header("Database Selection")
+    db_name = st.text_input("Enter Database Name", value="my_database")
+    if st.button("Load/Create Database"):
+        if db_name.strip():
+            # Sanitize database name to prevent invalid characters
+            db_name = ''.join(c for c in db_name if c.isalnum() or c in ['_', '-'])
+            st.session_state.db_file = f"{db_name}.sqlite"
+            # Reconnect to the new database
+            conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
+            cursor = conn.cursor()
+            # Create sample table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    age INTEGER,
+                    city TEXT
+                )
+            ''')
+            conn.commit()
+            st.success(f"Connected to database: {db_name}.sqlite")
+        else:
+            st.error("Please enter a valid database name.")
 
 # Initialize database connection (use default if not set)
 if 'db_file' not in st.session_state:
