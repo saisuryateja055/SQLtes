@@ -4,30 +4,11 @@ import pandas as pd
 from streamlit_ace import st_ace  # For SQL syntax highlighting
 import sqlparse  # For formatting SQL queries
 import base64  # For embedding logo
-
-# Initialize SQLite database (per user session)
-if 'db_file' not in st.session_state:
-    st.session_state.db_file = f"user_{st.session_state.get('_session_id', 'default')}.sqlite"
-conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
-cursor = conn.cursor()
-
-# Create a sample table if it doesn't exist
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        age INTEGER,
-        city TEXT
-    )
-''')
-conn.commit()
-
-# Initialize session state for query history
-if 'query_history' not in st.session_state:
-    st.session_state.query_history = []
+import os  # For checking file existence
 
 # Function to get database schema
-def get_schema():
+def get_schema(conn):
+    cursor = conn.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cursor.fetchall()
     schema = {}
@@ -39,7 +20,7 @@ def get_schema():
     return schema
 
 # Function to display table data
-def display_table(table_name):
+def display_table(table_name, conn):
     try:
         query = f"SELECT * FROM {table_name}"
         df = pd.read_sql_query(query, conn)
@@ -52,8 +33,8 @@ def display_table(table_name):
         st.error(f"Error displaying table: {e}")
 
 # Function to display schema
-def display_schema():
-    schema = get_schema()
+def display_schema(conn):
+    schema = get_schema(conn)
     if schema:
         st.markdown("**Database Schema:**")
         for table, columns in schema.items():
@@ -69,16 +50,16 @@ def get_base64_image(image_path):
         return base64.b64encode(img_file.read()).decode()
 
 # Streamlit app layout
-st.set_page_config(layout="wide", page_title="SQLTes", page_icon=":books:")
+st.set_page_config(layout="wide", page_title="SQLtes", page_icon=":books:")
 
-# Custom CSS for improved UI
+# Custom CSS for UI
 st.markdown("""
     <style>
     /* Main container styling */
     .stApp {
-          background: linear-gradient(205deg, #0d9488 0%, #2563eb 50%, #4f46e5 100%);
+        background: linear-gradient(205deg, #0d9488 0%, #2563eb 50%, #4f46e5 100%);
         color: #e0e0e0;
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Open Sans', sans-serif;
     }
     /* Remove top padding/margin */
     .block-container {
@@ -91,18 +72,20 @@ st.markdown("""
         margin: 0;
         padding: 10px 0;
     }
-    /* Title styling */
+    /* Title styling (h1) */
     h1 {
-        color: #f4d03f;
+        color: #ff6f61;
         font-size: 3em;
         margin: 0;
         padding: 10px 0;
         text-align: center;
+        font-family: 'Montserrat', sans-serif;
     }
-    /* Header styling */
+    /* Header styling (h2, h3) */
     h2, h3 {
-        color: #d5dbdb;
+        color: #a3e635;
         font-weight: 500;
+        font-family: 'Roboto', sans-serif;
     }
     /* Dataframe styling */
     .stDataFrame {
@@ -114,7 +97,7 @@ st.markdown("""
     /* Button styling */
     .stButton>button {
         background-color: #f4d03f;
-        color: #1a3c34;
+        color: #0d9488;
         border-radius: 6px;
         font-weight: 600;
         padding: 8px 16px;
@@ -126,7 +109,7 @@ st.markdown("""
     /* Selectbox styling */
     .stSelectbox select {
         background-color: #ffffff;
-        color: #1a3c34;
+        color: #0d9488;
         border-radius: 6px;
         padding: 5px;
     }
@@ -147,16 +130,64 @@ st.markdown("""
         border-radius: 6px !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
+    /* Sidebar styling */
+    .css-1d391kg {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
     /* Remove unnecessary margins */
     .stMarkdown, .stText {
         margin-bottom: 0.5rem;
     }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
+# Sidebar for database name input
+with st.sidebar:
+    st.header("Database Selection")
+    db_name = st.text_input("Enter Database Name", value="my_database")
+    if st.button("Load/Create Database"):
+        if db_name.strip():
+            # Sanitize database name to prevent invalid characters
+            db_name = ''.join(c for c in db_name if c.isalnum() or c in ['_', '-'])
+            st.session_state.db_file = f"{db_name}.sqlite"
+            # Reconnect to the new database
+            conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
+            cursor = conn.cursor()
+            # Create sample table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    age INTEGER,
+                    city TEXT
+                )
+            ''')
+            conn.commit()
+            st.success(f"Connected to database: {db_name}.sqlite")
+        else:
+            st.error("Please enter a valid database name.")
+
+# Initialize database connection (use default if not set)
+if 'db_file' not in st.session_state:
+    st.session_state.db_file = "default.sqlite"
+conn = sqlite3.connect(st.session_state.db_file, check_same_thread=False)
+cursor = conn.cursor()
+
+# Logo
+try:
+    logo_base64 = get_base64_image("logo.png")
+    st.markdown(f"""
+        <div class="logo-title-container">
+            <img src='data:image/png;base64,{logo_base64}' width='120'>
+        </div>
+    """, unsafe_allow_html=True)
+except FileNotFoundError:
+    st.markdown('<div class="logo-title-container"><h3>SQLtes</h3></div>', unsafe_allow_html=True)
+
 # Single, centered, large title
-st.markdown("<h1>SQLTes</h1>", unsafe_allow_html=True)
+st.markdown("<h1>SQLtes</h1>", unsafe_allow_html=True)
 st.markdown("<h2>Execute SQL commands and watch your database evolve in real time!</h2>", unsafe_allow_html=True)
 
 # Create tabs for different views
@@ -223,17 +254,17 @@ with tab1:
 
     with col2:
         st.header("Table View (Real-Time)")
-        schema = get_schema()
+        schema = get_schema(conn)
         if schema:
             selected_table = st.selectbox("Select Table to Display", list(schema.keys()))
-            display_table(selected_table)
+            display_table(selected_table, conn)
         else:
             st.markdown("No tables to display.")
 
 # Tab 2: Schema View
 with tab2:
     st.header("Database Schema")
-    display_schema()
+    display_schema(conn)
 
 # Tab 3: Query History
 with tab3:
